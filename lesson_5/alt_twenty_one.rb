@@ -55,7 +55,7 @@ def display_result(dealer_cards, player_cards)
   end
 end
 
-def joinand(values, delimiter=', ', word='and')
+def join_and(values, delimiter=', ', word='and')
   if values.size == 2
     values.join(" #{word} ")
   else
@@ -64,24 +64,22 @@ def joinand(values, delimiter=', ', word='and')
   end
 end
 
-def display_full_hand(hand_ary, player='Player')
+def display_hand(hand_ary, player='Player')
   card_values = hand_ary.map { |array| array[1] }
-  if player == 'Dealer'
-    prompt "Dealer has: #{joinand(card_values)}"
-  else prompt "You have: #{joinand(card_values)}"
+  if player == 'Dealer1'
+    prompt "Dealer has: #{hand_ary[0][1]} and ?"
+  elsif player == 'Dealer'
+    prompt "Dealer has: #{join_and(card_values)}"
+  else prompt "You have: #{join_and(card_values)}"
   end
-end
-
-def display_dealer_hand(hand_ary)
-  prompt "Dealer has: #{hand_ary[0][1]} and ?"
 end
 
 def opening_hand(dealer_cards, player_cards, deck)
   deal_first_hand(player_cards, deck)
-  display_full_hand(player_cards)
+  display_hand(player_cards)
 
   deal_first_hand(dealer_cards, deck)
-  display_dealer_hand(dealer_cards)
+  display_hand(dealer_cards, "Dealer1")
 end
 
 def player_plays_hand(player_cards, deck)
@@ -101,7 +99,7 @@ end
 def hit_me(player_cards, deck)
   player_cards << deck.pop
   prompt "You chose to hit!"
-  display_full_hand(player_cards)
+  display_hand(player_cards)
   prompt "Your total is now: #{card_total(player_cards)}"
 end
 
@@ -110,7 +108,7 @@ def dealer_plays_hand(dealer_cards, deck)
     break if busted?(dealer_cards) || card_total(dealer_cards) >= DLR_THRESHOLD
     prompt "Dealer hits!"
     dealer_cards << deck.pop
-    display_full_hand(dealer_cards, 'Dealer')
+    display_hand(dealer_cards, 'Dealer')
   end
 end
 
@@ -200,7 +198,7 @@ loop do
   end
 
   prompt "Dealer turn..."
-  display_full_hand(dealer_hand, 'Dealer')
+  display_hand(dealer_hand, 'Dealer')
   dealer_plays_hand(dealer_hand, deck)
 
   if busted?(dealer_hand)
