@@ -4,6 +4,8 @@ SUITS = ['D', 'H', 'C', 'S'].freeze # Diamonds, Hearts, Clubs, Spades
 GAME_NAME = 'Twenty-One'.freeze
 TARGET_NUMBER = 21
 DLR_THRESHOLD = TARGET_NUMBER - 4
+DEALER_HAS = 'Dealer has'
+YOU_HAVE = 'You have'
 
 def initialize_deck
   SUITS.product(CARDS).shuffle
@@ -64,22 +66,13 @@ def join_and(values, delimiter=', ', word='and')
   end
 end
 
-def display_hand(hand_ary, player='Player')
+def display_hand(hand_ary, prefix)
   card_values = hand_ary.map { |array| array[1] }
-  if player == 'Dealer1'
-    prompt "Dealer has: #{hand_ary[0][1]} and ?"
-  elsif player == 'Dealer'
-    prompt "Dealer has: #{join_and(card_values)}"
-  else prompt "You have: #{join_and(card_values)}"
-  end
+  prompt("#{prefix}: #{join_and(card_values)}")
 end
 
-def opening_hand(dealer_cards, player_cards, deck)
-  deal_first_hand(player_cards, deck)
-  display_hand(player_cards)
-
-  deal_first_hand(dealer_cards, deck)
-  display_hand(dealer_cards, "Dealer1")
+def display_hand_with_hidden_card(hand_ary)
+  display_hand([hand_ary[0], ['?', '?']], DEALER_HAS)
 end
 
 def player_plays_hand(player_cards, deck)
@@ -99,7 +92,7 @@ end
 def hit_me(player_cards, deck)
   player_cards << deck.pop
   prompt "You chose to hit!"
-  display_hand(player_cards)
+  display_hand(player_cards, YOU_HAVE)
   prompt "Your total is now: #{card_total(player_cards)}"
 end
 
@@ -108,7 +101,7 @@ def dealer_plays_hand(dealer_cards, deck)
     break if busted?(dealer_cards) || card_total(dealer_cards) >= DLR_THRESHOLD
     prompt "Dealer hits!"
     dealer_cards << deck.pop
-    display_hand(dealer_cards, 'Dealer')
+    display_hand(dealer_cards, DEALER_HAS)
   end
 end
 
@@ -134,16 +127,11 @@ def busted?(hand_ary)
   card_total(hand_ary) > TARGET_NUMBER
 end
 
-def game_result(dealer_cards, player_cards, score)
+def display_hand_totals(dealer_cards, player_cards)
   puts "==============="
   prompt "Dealer has a total of: #{card_total(dealer_cards)}"
   prompt "Player has a total of: #{card_total(player_cards)}"
   puts "==============="
-
-  display_result(dealer_cards, player_cards)
-  keep_score(dealer_cards, player_cards, score)
-  prompt "The score is Player: #{score['player']} Dealer: #{score['dealer']}"
-  prompt "First one to five wins!"
 end
 
 def clear_screen
@@ -152,19 +140,34 @@ end
 
 def play_again?
   puts "--------------"
-  prompt "Do you want to play again? (y or n)"
-  answer = gets.chomp
-  answer.downcase.start_with?('y')
+  answer = ''
+  loop do
+    prompt "Do you want to play again? (y or n)"
+    answer = gets.chomp
+    break if %w(y n).include?(answer)
+    prompt "I'm sorry. That's an invalid response."
+  end
+  answer == 'y'
 end
 
 def keep_score(dealer_cards, player_cards, score)
-  if detect_result(dealer_cards, player_cards) == :player ||
-     detect_result(dealer_cards, player_cards) == :dealer_busted
+  result = detect_result(dealer_cards, player_cards)
+
+  case result
+  when :player
     score['player'] += 1
-  elsif detect_result(dealer_cards, player_cards) == :dealer ||
-        detect_result(dealer_cards, player_cards) == :player_busted
+  when :dealer_busted
+    score['player'] += 1
+  when :dealer
+    score['dealer'] += 1
+  when :player_busted
     score['dealer'] += 1
   end
+end
+
+def display_score(score)
+  prompt "The score is Player: #{score['player']} Dealer: #{score['dealer']}"
+  prompt "First one to five wins!"
 end
 
 def display_final_score(score)
@@ -184,34 +187,46 @@ loop do
   player_hand = []
   dealer_hand = []
 
-  opening_hand(dealer_hand, player_hand, deck)
+  deal_first_hand(player_hand, deck)
+  display_hand(player_hand, YOU_HAVE)
+
+  deal_first_hand(dealer_hand, deck)
+  display_hand_with_hidden_card(dealer_hand)
 
   player_plays_hand(player_hand, deck)
 
   if busted?(player_hand)
-    game_result(dealer_hand, player_hand, score)
+    display_hand_totals(dealer_hand, player_hand)
+    display_result(dealer_hand, player_hand)
+    keep_score(dealer_hand, player_hand, score)
+    display_score(score)
     break unless play_again?
     clear_screen
     next
-  else
-    prompt "You chose to stay at #{card_total(player_hand)}!"
   end
 
+  prompt "You chose to stay at #{card_total(player_hand)}!"
   prompt "Dealer turn..."
-  display_hand(dealer_hand, 'Dealer')
+  display_hand(dealer_hand, DEALER_HAS)
   dealer_plays_hand(dealer_hand, deck)
 
   if busted?(dealer_hand)
     prompt "Dealer total is now: #{card_total(dealer_hand)}"
-    game_result(dealer_hand, player_hand, score)
+    display_hand_totals(dealer_hand, player_hand)
+    display_result(dealer_hand, player_hand)
+    keep_score(dealer_hand, player_hand, score)
+    display_score(score)
     break unless play_again?
     clear_screen
     next
-  else
-    prompt "Dealer stays at #{card_total(dealer_hand)}"
   end
 
-  game_result(dealer_hand, player_hand, score)
+  prompt "Dealer stays at #{card_total(dealer_hand)}"
+
+  display_hand_totals(dealer_hand, player_hand)
+  display_result(dealer_hand, player_hand)
+  keep_score(dealer_hand, player_hand, score)
+  display_score(score)
 
   break if score['player'] == 5 || score['dealer'] == 5
   break unless play_again?
